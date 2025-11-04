@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draft Helper - Heroes of the Storm</title>
+    <!-- Caricamento di Tailwind CSS per uno stile moderno e responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* Sfondo scuro per un look da gioco */
+            color: #e5e7eb;
+        }
+        .card {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+        }
+        .suggested-hero {
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            position: relative; /* Necessario per l'overlay dei dettagli */
+        }
+        .suggested-hero:hover {
+            background-color: #21262d;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-red-500 mb-2">Heroes of the Storm Draft Helper</h1>
+        <p class="text-xl text-gray-400">Inserisci i dettagli del draft per ottenere la migliore raccomandazione per l'eroe.</p>
+    </header>
+
+    <div id="app" class="max-w-4xl mx-auto">
+        
+        <!-- Controlli di Input -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+            
+            <!-- Selezione Mappa -->
+            <div class="card p-5 rounded-lg shadow-lg">
+                <label for="mapSelect" class="block text-lg font-semibold mb-3 text-red-400">1. Mappa Attuale</label>
+                <select id="mapSelect" class="w-full bg-gray-700 text-white border border-gray-600 rounded-lg p-3 focus:ring-red-500 focus:border-red-500 transition duration-150">
+                    <!-- Options populated by JS -->
+                </select>
+            </div>
+            
+            <!-- Eroi Alleati -->
+            <div class="card p-5 rounded-lg shadow-lg">
+                <label for="alliedHeroes" class="block text-lg font-semibold mb-3 text-green-400">2. Eroi Alleati (Seleziona 4)</label>
+                <div id="alliedHeroesContainer" class="space-y-2 max-h-40 overflow-y-auto pr-2 bg-gray-800 p-2 rounded-lg border border-gray-700">
+                    <!-- Checkboxes populated by JS -->
+                </div>
+            </div>
+            
+            <!-- Eroi Avversari -->
+            <div class="card p-5 rounded-lg shadow-lg">
+                <label for="enemyHeroes" class="block text-lg font-semibold mb-3 text-purple-400">3. Eroi Avversari (Seleziona 5)</label>
+                <div id="enemyHeroesContainer" class="space-y-2 max-h-40 overflow-y-auto pr-2 bg-gray-800 p-2 rounded-lg border border-gray-700">
+                    <!-- Checkboxes populated by JS -->
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Bottone di Calcolo -->
+        <div class="text-center mb-10">
+            <button onclick="calculateSuggestions()" 
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg shadow-xl transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-opacity-50">
+                Trova l'Eroe Migliore
+            </button>
+        </div>
+        
+        <!-- Risultati della Raccomandazione -->
+        <div class="card p-6 rounded-lg shadow-xl" id="resultsContainer">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Raccomandazioni Eroe</h2>
+            <div id="suggestionsList" class="space-y-4">
+                <p class="text-center text-gray-400">Inserisci la mappa e gli eroi per iniziare.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Mappe complete
+        const MAPS = [
+            'Battlefield of Eternity',
+            'Infernal Shrines',
+            'Towers of Doom',
+            'Cursed Hollow',
+            'Volskaya Foundry',
+            'Braxis Holdout',
+            'Alterac Pass',
+            'Dragon Shire',
+            'Garden of Terror',
+            'Sky Temple',
+            'Tomb of the Spider Queen',
+        ];
+
+        // Mappa predefinita dei punteggi per gli eroi appena aggiunti
+        const DEFAULT_MAP_SCORES = MAPS.reduce((acc, map) => {
+            acc[map] = 3; // Punteggio neutro
+            return acc;
+        }, {});
+
+        // --- DATASET ESTESO E AGGIORNATO CON TUTTI GLI EROI RICHIESTI ---
+        const HEROES_DATA = [
+            // ================================== TANK ==================================
+            { id: 'anubarak', name: 'Anub\'arak', role: 'Tank', mapScore: { 'Battlefield of Eternity': 2, 'Infernal Shrines': 3, 'Towers of Doom': 4, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 1, 'Alterac Pass': 5, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 3, 'Tomb of the Spider Queen': 2 }, synergy: ['jaina', 'kaelthas','butcher','rehgar','greymane'], counter: ['malthael', 'tracer', 'valla', 'zuljin', 'varian', 'leoric'] },
+            { id: 'arthas', name: 'Arthas', role: 'Tank', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 4, 'Towers of Doom': 3, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 1, 'Alterac Pass': 4, 'Dragon Shire': 2, 'Garden of Terror': 2, 'Sky Temple': 4, 'Tomb of the Spider Queen': 3 }, synergy: ['greymane', 'raynor', 'chromie', 'stukov', 'rehgar', 'maiev', 'tyrael', 'zarya', 'maiev'], counter: ['garrosh', 'jaina', 'deckard', 'ana', 'hanzo', 'kethuzad'] },
+            { id: 'blaze', name: 'Blaze', role: 'Tank', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 1, 'Alterac Pass': 3, 'Dragon Shire': 2, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 4 }, synergy: ['arthas', 'kerrigan', 'maiev', 'malfurion'], counter: ['leoric', 'lunara', 'malthael', 'tracer', 'nova', 'valla'] },
+            { id: 'cho', name: 'Cho', role: 'Tank', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 5, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 2, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 4 }, synergy: ['gall', 'alexstrasza', 'brightwing', 'ana', 'auriel', 'yrel', 'blaze', 'johanna'], counter: ['malthael', 'leoric', 'brightwing', 'anubarak', 'maiev', 'kharazim', 'greymane', 'garrosh', 'raynor', 'imperius'] },
+            { id: 'diablo', name: 'Diablo', role: 'Tank', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 4, 'Towers of Doom': 3, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 1, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 5 }, synergy: ['thrall', 'auriel', 'tassadar', 'tyrande', 'greymane', 'brightwing'], counter: ['malthael', 'leoric', 'johanna', 'garrosh', 'tychus', 'raynor'] },
+            { id: 'etc', name: 'E.T.C.', role: 'Tank', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 4, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 2, 'Braxis Holdout': 2, 'Alterac Pass': 3, 'Dragon Shire': 2, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 2 }, synergy: ['jaina', 'kaelthas', 'blaze', 'uther', 'alarak', 'greymane', 'tyrande', 'sghammer', 'orphea'], counter: ['uther', 'johanna', 'kaelthas', 'raynor', 'deathwing'] },
+            { id: 'garrosh', name: 'Garrosh', role: 'Tank', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 3, 'Towers of Doom': 2, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 4, 'Dragon Shire': 5, 'Garden of Terror': 2, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['jaina', 'hanzo', 'malfurion', 'zarya', 'deckard', 'lucio'], counter: ['johanna', 'malthael', 'sylvanas', 'anduin', 'jaina', 'hanzo', 'lunara', 'leoric', 'medivh'] },
+            { id: 'johanna', name: 'Johanna', role: 'Tank', mapScore: { 'Battlefield of Eternity': 2, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 1, 'Alterac Pass': 5, 'Dragon Shire': 2, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 5 }, synergy: ['azmodan', 'blaze', 'maiev', 'jaina', 'deckard', 'leoric'], counter: ['varian', 'zeratul', 'hanzo', 'leoric'] },
+            { id: 'malganis', name: 'Mal\'Ganis', role: 'Tank', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 4, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 4, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 2 }, synergy: ['kelthuzad', 'deckard', 'malfurion', 'jaina', 'illidan', 'zeratul', 'orphea'], counter: ['garrosh', 'raynor', 'malfurion', 'zeratul', 'hanzo', 'deckard'] },
+            { id: 'mei', name: 'Mei', role: 'Tank', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 4, 'Towers of Doom': 2, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 2, 'Garden of Terror': 2, 'Sky Temple': 4, 'Tomb of the Spider Queen': 4 }, synergy: ['jaina', 'tassadar', 'xul', 'deckard', 'lunara', 'maiev', 'orphea', 'greymane', 'raynor'], counter: ['malfurion', 'etc', 'tracer', 'hanzo', 'ana', 'li-ming', 'junkrat', 'yrel', 'zeratul'] },
+            { id: 'muradin', name: 'Muradin', role: 'Tank', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 1, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 2, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 1 }, synergy: ['li-ming', 'blaze', 'kerrigan', 'malfurion', 'orphea', 'hanzo'], counter: ['zarya', 'tychus', 'etc', 'raynor', 'thrall',] },
+            { id: 'stitches', name: 'Stitches', role: 'Tank', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 3, 'Towers of Doom': 5, 'Cursed Hollow': 4, 'Volskaya Foundry': 4, 'Braxis Holdout': 3, 'Alterac Pass': 5, 'Dragon Shire': 3, 'Garden of Terror': 4, 'Sky Temple': 2, 'Tomb of the Spider Queen': 4 }, synergy: ['jaina', 'chromie', 'kaelthas', 'malfurion', 'falstad', 'tyrande'], counter: ['tracer', 'genji', 'muradin', 'johanna', 'malthael', 'tychus', 'anduin'] },
+            { id: 'tyrael', name: 'Tyrael', role: 'Tank', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 4, 'Towers of Doom': 3, 'Cursed Hollow': 5, 'Volskaya Foundry': 2, 'Braxis Holdout': 3, 'Alterac Pass': 5, 'Dragon Shire': 4, 'Garden of Terror': 3, 'Sky Temple': 5, 'Tomb of the Spider Queen': 4 }, synergy: ['illidan', 'greymane', 'kerrigan', 'morales', 'blaze', 'sghammer', 'valla'], counter: ['medivh', 'falstad', 'garrosh', 'mei', 'zeratul', 'brightwing'] },
+            { id: 'varian', name: 'Varian', role: 'Tank', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 2, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 4, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 1, 'Tomb of the Spider Queen': 3 }, synergy: ['imperius', 'anduin', 'tyrande', 'malfurion', 'blaze', 'li-ming'], counter: ['hanzo', 'etc', 'garrosh', 'lunara', 'rehgar', 'uther', 'medivh', 'arthas'] },
+
+            // ================================== BRUISER ==================================
+            { id: 'artanis', name: 'Artanis', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 2, 'Towers of Doom': 1, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 4, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 2 }, synergy: ['malfurion', 'garrosh', 'kaelthas', 'zarya', 'lunara', 'arthas', 'lucio'], counter: ['arthas', 'johanna', 'etc', 'lili', 'varian', 'jaina'] },
+            { id: 'chen', name: 'Chen', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 4, 'Towers of Doom': 1, 'Cursed Hollow': 2, 'Volskaya Foundry': 3, 'Braxis Holdout': 4, 'Alterac Pass': 4, 'Dragon Shire': 3, 'Garden of Terror': 2, 'Sky Temple': 5, 'Tomb of the Spider Queen': 3 }, synergy: ['tyrael', 'rehgar', 'greymane', 'li-ming', 'abathur', 'johanna'], counter: ['etc', 'lucio', 'raynor', 'yrel', 'tlv', 'li-ming', 'abathur'] },
+            { id: 'deathwing', name: 'Deathwing', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 3, 'Towers of Doom': 4, 'Cursed Hollow': 5, 'Volskaya Foundry': 3, 'Braxis Holdout': 3, 'Alterac Pass': 4, 'Dragon Shire': 1, 'Garden of Terror': 5, 'Sky Temple': 1, 'Tomb of the Spider Queen': 3 }, synergy: ['johanna', 'etc', 'arthas', 'muradin', 'malfurion'], counter: ['tychus', 'greymane', 'zeratul', 'valla', 'tracer', 'leoric'] },
+            { id: 'dehaka', name: 'Dehaka', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 4, 'Towers of Doom': 5, 'Cursed Hollow': 5, 'Volskaya Foundry': 1, 'Braxis Holdout': 4, 'Alterac Pass': 3, 'Dragon Shire': 5, 'Garden of Terror': 4, 'Sky Temple': 5, 'Tomb of the Spider Queen': 3 }, synergy: ['junkrat', 'anubarak', 'maiev', 'jaina', 'orphea', 'hanzo'], counter: ['lucio', 'valla', 'sghammer', 'etc', 'raynor'] },
+            { id: 'dva', name: 'D.Va', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 2, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 2, 'Volskaya Foundry': 4, 'Braxis Holdout': 1, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 5 }, synergy: ['garrosh', 'falstad', 'maiev', 'deckard', 'anduin'], counter: ['butcher', 'artanis', 'etc', 'raynor', 'malthael', 'stukov'] },
+            { id: 'gazlowe', name: 'Gazlowe', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 1, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 4, 'Alterac Pass': 4, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 5, 'Tomb of the Spider Queen': 3 }, synergy: ['jaina', 'etc', 'diablo', 'johanna', 'malfurion', 'kaelthas', 'maiev', 'anduin'], counter: ['tracer', 'raynor', 'guldan', 'li-ming', 'hanzo', 'chromie', 'lunara'] },
+            { id: 'hogger', name: 'Hogger', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 5, 'Volskaya Foundry': 3, 'Braxis Holdout': 3, 'Alterac Pass': 4, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 5, 'Tomb of the Spider Queen': 4 }, synergy: ['diablo', 'hanzo', 'sonya', 'stukov', 'auriel', 'orphea'], counter: ['diablo', 'uther', 'lunara', 'tychus', 'malthael', 'zeratul'] },
+            { id: 'imperius', name: 'Imperius', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 3, 'Towers of Doom': 1, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 4, 'Dragon Shire': 3, 'Garden of Terror': 2, 'Sky Temple': 2, 'Tomb of the Spider Queen': 3 }, synergy: ['varian', 'jaina', 'fenix', 'rehgar', 'etc', 'blaze', 'malganis', 'yrel'], counter: ['jaina', 'raynor', 'sghammer', 'etc', 'lucio', 'zuljin'] },
+            { id: 'leoric', name: 'Leoric', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 5, 'Volskaya Foundry': 4, 'Braxis Holdout': 2, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 5, 'Sky Temple': 2, 'Tomb of the Spider Queen': 4 }, synergy: ['diablo', 'orphea', 'stukov'], counter: ['tracer', 'dehaka', 'ana', 'samuro', 'falstad'] },
+            { id: 'malthael', name: 'Malthael', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 5, 'Towers of Doom': 5, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 3, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 4, 'Tomb of the Spider Queen': 4 }, synergy: ['etc', 'malfurion', 'ana', 'garrosh', 'greymane', 'tychus', 'uther'], counter: ['falstad', 'valla', 'tracer', 'fenix', 'lunara', 'medivh'] },
+            { id: 'ragnaros', name: 'Ragnaros', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 5, 'Towers of Doom': 1, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 2, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 5, 'Tomb of the Spider Queen': 4 }, synergy: ['etc', 'kaelthas', 'ana', 'hanzo'], counter: ['garrosh', 'orphea', 'tracer', 'lunara', 'jaina', 'stukov', 'sonya', 'chen'] },
+            { id: 'rexxar', name: 'Rexxar', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 2, 'Infernal Shrines': 2, 'Towers of Doom': 2, 'Cursed Hollow': 2, 'Volskaya Foundry': 2, 'Braxis Holdout': 5, 'Alterac Pass': 2, 'Dragon Shire': 5, 'Garden of Terror': 2, 'Sky Temple': 2, 'Tomb of the Spider Queen': 4 }, synergy: ['johanna', 'malfurion', 'jaina'], counter: ['genji', 'tracer', 'illidan', 'tyrael', 'qhira', 'kharazim', 'zeratul'] },
+            { id: 'sonya', name: 'Sonya', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 2, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 3, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['muradin', 'tracer', 'jaina', 'orphea', 'etc'], counter: ['etc', 'sylvanas', 'brightwing', 'tychus', 'leoric'] },
+            { id: 'thrall', name: 'Thrall', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 3, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 1, 'Sky Temple': 3, 'Tomb of the Spider Queen': 1 }, synergy: ['diablo', 'rehgar', 'fenix', 'chromie', 'jaina'], counter: ['johanna', 'arthas', 'kaelthas', 'lunara', 'lili', 'malfurion'] },
+            { id: 'varian', name: 'Varian', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 2, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 4, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 1, 'Tomb of the Spider Queen': 3 }, synergy: ['imperius', 'anduin', 'tyrande', 'malfurion', 'blaze', 'li-ming'], counter: ['hanzo', 'etc', 'garrosh', 'lunara', 'rehgar', 'uther', 'medivh', 'arthas'] },
+            { id: 'xul', name: 'Xul', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 5, 'Towers of Doom': 3, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 1, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 4, 'Sky Temple': 4, 'Tomb of the Spider Queen': 5 }, synergy: ['tyrande', 'malfurion', 'medivh', 'falstad', 'li-ming'], counter: ['etc', 'johanna', 'sghammer', 'jaina', 'auriel'] },
+            { id: 'yrel', name: 'Yrel', role: 'Bruiser', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 5, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 3 }, synergy: ['garrosh', 'johanna', 'maiev', 'abathur'], counter: ['etc', 'lucio', 'johanna', 'raynor'] },
+            
+            // ================================== ASSASSIN RANGED ==================================
+            { id: 'azmodan', name: 'Azmodan', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 1, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 5 }, synergy: ['johanna', 'maiev', 'malfurion'], counter: ['diablo', 'muradin', 'anubarak', 'butcher', 'malthael', 'artanis', 'sonya'] },
+            { id: 'cassia', name: 'Cassia', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 4, 'Infernal Shrines': 4, 'Towers of Doom': 4, 'Cursed Hollow': 4, 'Volskaya Foundry': 4, 'Braxis Holdout': 4, 'Alterac Pass': 4, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 4, 'Tomb of the Spider Queen': 4 }, synergy: ['johanna', 'lili', 'artanis', 'jaina', 'thrall'], counter: ['kaelthas', 'johanna', 'xul', 'malganis', 'imperius', 'etc'] },
+            { id: 'chromie', name: 'Chromie', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 3, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 5, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['malfurion', 'johanna', 'ana'], counter: ['tracer', 'genji', 'zeratul', 'illidan', 'diablo'] },
+            { id: 'falstad', name: 'Falstad', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 3, 'Towers of Doom': 4, 'Cursed Hollow': 5, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 5, 'Garden of Terror': 3, 'Sky Temple': 5, 'Tomb of the Spider Queen': 1 }, synergy: ['uther', 'etc', 'arthas', 'tassadar'], counter: ['nova', 'genji', 'zeratul', 'illidan', 'greymane', 'valeera'] },
+            { id: 'fenix', name: 'Fenix', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 5 }, synergy: ['johanna', 'maiev', 'thrall', 'diablo'], counter: ['varian', 'etc', 'genji', 'zeratul', 'lucio'] },
+            { id: 'gall', name: 'Gall', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 5, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 2, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 4 }, synergy: ['cho', 'alexstrasza', 'brightwing', 'ana', 'auriel', 'yrel', 'blaze', 'johanna'], counter: ['malthael', 'leoric', 'brightwing', 'anubarak', 'maiev', 'kharazim', 'greymane', 'garrosh', 'raynor', 'imperius'] },
+            { id: 'genji', name: 'Genji', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 2, 'Infernal Shrines': 4, 'Towers of Doom': 3, 'Cursed Hollow': 5, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 3, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 1 }, synergy: ['uther', 'etc', 'jaina', 'anduin'], counter: ['uther', 'varian', 'lunara', 'malfurion'] },
+            { id: 'greymane', name: 'Greymane', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 3, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 3, 'Alterac Pass': 3, 'Dragon Shire': 5, 'Garden of Terror': 5, 'Sky Temple': 5, 'Tomb of the Spider Queen': 4 }, synergy: ['malthael', 'uther', 'etc', 'rehgar', 'tyrael', 'abathur', 'garrosh'], counter: ['arthas', 'johanna', 'uther', 'brightwing', 'butcher', 'muradin', 'xul'] },
+            { id: 'guldan', name: 'Gul\'dan', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 4, 'Dragon Shire': 5, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 5 }, synergy: ['johanna', 'etc', 'malfurion', 'auriel'], counter: ['tracer', 'maiev', 'kerrigan'] },
+            { id: 'hanzo', name: 'Hanzo', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 5, 'Towers of Doom': 5, 'Cursed Hollow': 4, 'Volskaya Foundry': 4, 'Braxis Holdout': 3, 'Alterac Pass': 4, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 4 }, synergy: ['etc', 'johanna', 'malganis', 'diablo', 'blaze', 'zeratul'], counter: ['genji', 'illidan', 'zeratul', 'tracer'] },
+            { id: 'jaina', name: 'Jaina', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 3, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 4, 'Alterac Pass': 3, 'Dragon Shire': 5, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 5 }, synergy: ['muradin', 'johanna', 'etc', 'xul', 'muradin', 'varian', 'maiev', 'malfurion'], counter: ['genji', 'tracer', 'anubarak', 'alarak', 'chen', 'valeera', 'nova', 'zeratul'] },
+            { id: 'junkrat', name: 'Junkrat', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 5, 'Cursed Hollow': 4, 'Volskaya Foundry': 4, 'Braxis Holdout': 4, 'Alterac Pass': 4, 'Dragon Shire': 5, 'Garden of Terror': 5, 'Sky Temple': 4, 'Tomb of the Spider Queen': 4 }, synergy: ['etc', 'garrosh', 'uther', 'malfurion', 'zeratul'], counter: ['tracer', 'genji', 'zeratul', 'illidan', 'tyrael'] },
+            { id: 'kaelthas', name: 'Kael\'thas', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 5 }, synergy: ['etc', 'johanna', 'arthas', 'uther', 'malfurion'], counter: ['kerrigan', 'illidan', 'zeratul', 'tracer'] },
+            { id: 'kelthuzad', name: 'Kel\'Thuzad', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 4, 'Towers of Doom': 5, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 1, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['anduin', 'arthas', 'johanna', 'malfurion', 'butcher', 'valeera', 'varian', 'xul'], counter: ['tracer', 'genji', 'zeratul', 'nova', 'anubarak', 'chen', 'samuro', 'valeera'] },
+            { id: 'li-ming', name: 'Li-Ming', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 5, 'Volskaya Foundry': 3, 'Braxis Holdout': 3, 'Alterac Pass': 5, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['etc', 'arthas', 'johanna', 'varian', 'malfurion', 'valeera', 'xul'], counter: ['tracer', 'genji', 'zeratul', 'nova', 'anubarak', 'chen', 'samuro', 'valeera'] },
+            { id: 'lunara', name: 'Lunara', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 3, 'Towers of Doom': 3, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 3, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['arthas', 'muradin', 'jaina'], counter: ['genji', 'stukov', 'illidan', 'malfurion', 'lucio'] },
+            { id: 'mephisto', name: 'Mephisto', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 5, 'Braxis Holdout': 5, 'Alterac Pass': 5, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['etc', 'diablo', 'deckard', 'zarya', 'deckard'], counter: ['kaelthas', 'kelthuzad', 'junkrat', 'stitches', 'anubarak'] },
+            { id: 'nazeebo', name: 'Nazeebo', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 3, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 5, 'Braxis Holdout': 1, 'Alterac Pass': 3, 'Dragon Shire': 5, 'Garden of Terror': 3, 'Sky Temple': 1, 'Tomb of the Spider Queen': 5 }, synergy: ['johanna', 'stukov', 'raynor', 'sylvanas', 'malganis', 'auriel'], counter: ['etc', 'sylvanas', 'zeratul'] },
+            { id: 'nova', name: 'Nova', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 1, 'Towers of Doom': 2, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 1, 'Alterac Pass': 3, 'Dragon Shire': 5, 'Garden of Terror': 2, 'Sky Temple': 1, 'Tomb of the Spider Queen': 2 }, synergy: ['blaze', 'johanna', 'sylvanas', 'stukov'], counter: ['anubarak', 'genji', 'zeratul', 'chen', 'zarya', 'brightwing'] },
+            { id: 'orphea', name: 'Orphea', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 4, 'Towers of Doom': 3, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 5, 'Tomb of the Spider Queen': 5 }, synergy: ['blaze', 'johanna', 'maiev', 'xul', 'malganis', 'varian', 'etc'], counter: ['anubarak', 'genji', 'chen', 'johanna', 'lunara', 'muradin'] },
+            { id: 'probius', name: 'Probius', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 1, 'Infernal Shrines': 4, 'Towers of Doom': 5, 'Cursed Hollow': 3, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 4, 'Dragon Shire': 3, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 4 }, synergy: ['diablo', 'etc', 'anubarak', 'arthas', 'malfurion'], counter: ['tracer', 'kerrigan', 'zeratul', 'alarak'] },
+            { id: 'raynor', name: 'Raynor', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 5, 'Infernal Shrines': 5, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 3, 'Alterac Pass': 3, 'Dragon Shire': 5, 'Garden of Terror': 3, 'Sky Temple': 3, 'Tomb of the Spider Queen': 4 }, synergy: ['etc', 'thrall', 'garrosh', 'morales'], counter: ['johanna', 'cassia', 'artanis', 'lili'] },
+            { id: 'sghammer', name: 'Sgt. Hammer', role: 'Ranged Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['johanna', 'uther'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'sylvanas', name: 'Sylvanas', role: 'Ranged Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['johanna', 'malfurion'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'tassadar', name: 'Tassadar', role: 'Ranged Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['tracer', 'illidan'], counter: ['chromie', 'kelthuzad', 'jaina'] },
+            { id: 'tracer', name: 'Tracer', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 3, 'Towers of Doom': 5, 'Cursed Hollow': 4, 'Volskaya Foundry': 4, 'Braxis Holdout': 3, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 5, 'Tomb of the Spider Queen': 4 }, synergy: ['abathur', 'brightwing'], counter: ['jaina', 'stitches', 'uther'] },
+            { id: 'tychus', name: 'Tychus', role: 'Ranged Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['uther', 'johanna'], counter: ['malthael', 'leoric', 'illidan'] },
+            { id: 'valla', name: 'Valla', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 4, 'Infernal Shrines': 3, 'Towers of Doom': 5, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 4, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 3, 'Sky Temple': 5, 'Tomb of the Spider Queen': 5 }, synergy: ['diablo', 'uther', 'reghar'], counter: ['chromie', 'kelthuzad', 'maiev'] },
+            { id: 'zagara', name: 'Zagara', role: 'Ranged Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 4, 'Towers of Doom': 4, 'Cursed Hollow': 5, 'Volskaya Foundry': 3, 'Braxis Holdout': 4, 'Alterac Pass': 5, 'Dragon Shire': 4, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 4 }, synergy: ['johanna', 'sylvanas'], counter: ['stitches', 'hanzo', 'li-ming'] },
+            { id: 'zuljin', name: 'Zul\'jin', role: 'Ranged Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['uther', 'reghar'], counter: ['tracer', 'genji', 'zeratul'] },
+
+            // ================================== ASSASSIN MELEE ==================================
+            { id: 'alarak', name: 'Alarak', role: 'Melee Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['diablo', 'etc'], counter: ['tracer', 'genji', 'johanna'] },
+            { id: 'illidan', name: 'Illidan', role: 'Melee Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 2, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 3 }, synergy: ['reghar', 'abathur'], counter: ['jaina', 'li-ming', 'chromie'] },
+            { id: 'kerrigan', name: 'Kerrigan', role: 'Melee Assassin', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 3, 'Towers of Doom': 4, 'Cursed Hollow': 3, 'Volskaya Foundry': 5, 'Braxis Holdout': 4, 'Alterac Pass': 4, 'Dragon Shire': 5, 'Garden of Terror': 4, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['uther', 'diablo', 'malfurion'], counter: ['stitches', 'johanna', 'brightwing'] },
+            { id: 'maiev', name: 'Maiev', role: 'Melee Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['diablo', 'etc'], counter: ['tracer', 'jaina', 'li-ming'] },
+            { id: 'murky', name: 'Murky', role: 'Melee Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['abathur', 'tyrael'], counter: ['johanna', 'stitches', 'etc'] },
+            { id: 'qhira', name: 'Qhira', role: 'Melee Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['uther', 'reghar'], counter: ['stitches', 'johanna', 'etc'] },
+            { id: 'samuro', name: 'Samuro', role: 'Melee Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['uther', 'malfurion'], counter: ['jaina', 'etc', 'muradin'] },
+            { id: 'butcher', name: 'The Butcher', role: 'Melee Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['diablo', 'uther'], counter: ['johanna', 'stitches', 'etc'] },
+            { id: 'valeera', name: 'Valeera', role: 'Melee Assassin', mapScore: DEFAULT_MAP_SCORES, synergy: ['diablo', 'etc'], counter: ['brightwing', 'uther', 'johanna'] },
+            { id: 'zeratul', name: 'Zeratul', role: 'Melee Assassin', mapScore: { 'Battlefield of Eternity': 4, 'Infernal Shrines': 3, 'Towers of Doom': 5, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 4, 'Alterac Pass': 4, 'Dragon Shire': 3, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 4 }, synergy: ['etc', 'jaina'], counter: ['brightwing', 'uther', 'guldan'] },
+
+            // ================================== HEALER ==================================
+            { id: 'alexstrasza', name: 'Alexstrasza', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['johanna', 'malfurion'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'ana', name: 'Ana', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['jaina', 'kaelthas'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'anduin', name: 'Anduin', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['leoric', 'johanna'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'auriel', name: 'Auriel', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['guldan', 'valla'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'brightwing', name: 'Brightwing', role: 'Healer', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 3, 'Towers of Doom': 4, 'Cursed Hollow': 4, 'Volskaya Foundry': 4, 'Braxis Holdout': 3, 'Alterac Pass': 4, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 5, 'Tomb of the Spider Queen': 3 }, synergy: ['illidan', 'tracer'], counter: ['muradin', 'chromie', 'hanzo'] },
+            { id: 'deckard', name: 'Deckard', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['johanna', 'etc'], counter: ['tracer', 'genji', 'illidan'] },
+            { id: 'kharazim', name: 'Kharazim', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['illidan', 'greymane'], counter: ['stitches', 'johanna', 'etc'] },
+            { id: 'lili', name: 'Li Li', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['sonya', 'illidan'], counter: ['chromie', 'kelthuzad', 'jaina'] },
+            { id: 'morales', name: 'Lt. Morales', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['raynor', 'sghammer'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'lucio', name: 'Lúcio', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['tracer', 'illidan'], counter: ['johanna', 'stitches', 'etc'] },
+            { id: 'malfurion', name: 'Malfurion', role: 'Healer', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 4, 'Towers of Doom': 5, 'Cursed Hollow': 5, 'Volskaya Foundry': 4, 'Braxis Holdout': 3, 'Alterac Pass': 4, 'Dragon Shire': 4, 'Garden of Terror': 5, 'Sky Temple': 3, 'Tomb of the Spider Queen': 4 }, synergy: ['jaina', 'li-ming'], counter: ['tracer', 'zeratul', 'illidan'] },
+            { id: 'reghar', name: 'Rehgar', role: 'Healer', mapScore: { 'Battlefield of Eternity': 4, 'Infernal Shrines': 4, 'Towers of Doom': 5, 'Cursed Hollow': 4, 'Volskaya Foundry': 4, 'Braxis Holdout': 5, 'Alterac Pass': 4, 'Dragon Shire': 5, 'Garden of Terror': 4, 'Sky Temple': 4, 'Tomb of the Spider Queen': 4 }, synergy: ['sonya', 'illidan', 'greymane'], counter: ['fenix', 'hanzo', 'kaelthas'] },
+            { id: 'stukov', name: 'Stukov', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['jaina', 'etc'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'tyrande', name: 'Tyrande', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['jaina', 'illidan'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'uther', name: 'Uther', role: 'Healer', mapScore: { 'Battlefield of Eternity': 3, 'Infernal Shrines': 5, 'Towers of Doom': 3, 'Cursed Hollow': 4, 'Volskaya Foundry': 4, 'Braxis Holdout': 3, 'Alterac Pass': 3, 'Dragon Shire': 4, 'Garden of Terror': 3, 'Sky Temple': 4, 'Tomb of the Spider Queen': 4 }, synergy: ['kerrigan', 'greymane', 'etc'], counter: ['guldan', 'chromie', 'malthael'] },
+            { id: 'whitemane', name: 'Whitemane', role: 'Healer', mapScore: DEFAULT_MAP_SCORES, synergy: ['etc', 'johanna'], counter: ['tracer', 'genji', 'zeratul'] },
+
+            // ================================== SUPPORT ==================================
+            { id: 'abathur', name: 'Abathur', role: 'Support', mapScore: { 'Battlefield of Eternity': 2, 'Infernal Shrines': 3, 'Towers of Doom': 5, 'Cursed Hollow': 4, 'Volskaya Foundry': 3, 'Braxis Holdout': 5, 'Alterac Pass': 5, 'Dragon Shire': 4, 'Garden of Terror': 4, 'Sky Temple': 3, 'Tomb of the Spider Queen': 3 }, synergy: ['illidan', 'tracer', 'greymane'], counter: ['dehaka', 'zeratul', 'brightwing'] },
+            { id: 'medivh', name: 'Medivh', role: 'Support', mapScore: DEFAULT_MAP_SCORES, synergy: ['etc', 'johanna'], counter: ['tracer', 'genji', 'zeratul'] },
+            { id: 'tlv', name: 'The Lost Vikings', role: 'Support', mapScore: DEFAULT_MAP_SCORES, synergy: ['johanna', 'etc'], counter: ['malthael', 'leoric', 'johanna'] },
+            { id: 'zarya', name: 'Zarya', role: 'Support', mapScore: DEFAULT_MAP_SCORES, synergy: ['jaina', 'kaelthas'], counter: ['malthael', 'leoric', 'johanna'] },
+        ];
+
+        const ROLES = ['Tank', 'Bruiser', 'Melee Assassin', 'Ranged Assassin', 'Healer', 'Support'];
+
+        // Pesi per il calcolo del punteggio
+        const SCORE_WEIGHTS = {
+            map: 1.5,
+            synergy: 2.0,
+            counter: 2.5,
+            roleBonus: 5.0 // Grande bonus per riempire un ruolo mancante
+        };
+
+        // --- FUNZIONI DI INIZIALIZZAZIONE UI ---
+
+        /** Inizializza le dropdown/checkbox con i dati degli eroi e delle mappe. */
+        function initializeUI() {
+            const mapSelect = document.getElementById('mapSelect');
+            const alliedContainer = document.getElementById('alliedHeroesContainer');
+            const enemyContainer = document.getElementById('enemyHeroesContainer');
+
+            // 1. Inizializza Mappe
+            mapSelect.innerHTML = '<option value="">Seleziona Mappa...</option>';
+            MAPS.forEach(map => {
+                const option = document.createElement('option');
+                option.value = map;
+                option.textContent = map;
+                mapSelect.appendChild(option);
+            });
+
+            // 2. Inizializza Eroi (Alleati & Avversari)
+            // Filtra per eroi con dati completi (ovvero: hanno il mapScore per la prima mappa)
+            const availableHeroes = HEROES_DATA.filter(hero => hero.mapScore[MAPS[0]]);
+            
+            availableHeroes.sort((a, b) => a.name.localeCompare(b.name)).forEach(hero => {
+                const checkboxHtml = `
+                    <label class="flex items-center space-x-2 text-sm">
+                        <input type="checkbox" name="__HERO_TYPE__" value="${hero.id}" 
+                               class="hero-checkbox form-checkbox h-4 w-4 __COLOR_CLASS__ bg-gray-700 border-gray-600 rounded">
+                        <span>${hero.name} <span class="text-gray-400">(${hero.role})</span></span>
+                    </label>
+                `;
+
+                // Checkbox Alleati
+                alliedContainer.innerHTML += checkboxHtml
+                    .replace('__HERO_TYPE__', 'alliedHero')
+                    .replace('__COLOR_CLASS__', 'text-green-500');
+                
+                // Checkbox Avversari
+                enemyContainer.innerHTML += checkboxHtml
+                    .replace('__HERO_TYPE__', 'enemyHero')
+                    .replace('__COLOR_CLASS__', 'text-purple-500');
+            });
+
+            // Aggiunge listener per limitare a 4 alleati e 5 nemici
+            setupCheckboxLimits('alliedHero', 4);
+            setupCheckboxLimits('enemyHero', 5);
+        }
+        
+        /** Imposta il limite di selezione per i gruppi di checkbox. */
+        function setupCheckboxLimits(name, limit) {
+            const checkboxes = document.querySelectorAll(`input[name="${name}"]`);
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    const checked = document.querySelectorAll(`input[name="${name}"]:checked`);
+                    
+                    // Impedisce la selezione se il limite è superato
+                    if (checked.length > limit) {
+                        checkbox.checked = false;
+                        displayMessage(`Errore: Puoi selezionare un massimo di ${limit} Eroi ${name.includes('allied') ? 'Alleati' : 'Avversari'}.`, true);
+                        return; 
+                    }
+                    
+                    // Logica di prevenzione doppia selezione (Alleato vs Nemico)
+                    const otherName = name === 'alliedHero' ? 'enemyHero' : 'alliedHero';
+                    const otherCheckbox = document.querySelector(`input[name="${otherName}"][value="${checkbox.value}"]`);
+                    
+                    if (checkbox.checked && otherCheckbox && otherCheckbox.checked) {
+                         otherCheckbox.checked = false;
+                         displayMessage(`Attenzione: ${HEROES_DATA.find(h => h.id === checkbox.value).name} è stato rimosso dalla lista ${otherName === 'alliedHero' ? 'Alleati' : 'Avversari'}. Un eroe può essere selezionato solo una volta.`, false);
+                    }
+                });
+            });
+        }
+
+        /** Mostra un messaggio di stato/errore nell'area risultati */
+        function displayMessage(message, isError = true) {
+            const list = document.getElementById('suggestionsList');
+            const colorClass = isError ? 'bg-yellow-900 text-yellow-300' : 'bg-blue-900 text-blue-300';
+            list.innerHTML = `<p class="text-center p-4 rounded-lg ${colorClass}">${message}</p>`;
+        }
+
+
+        // --- LOGICA DI DRAFTING ---
+
+        /** Calcola i suggerimenti in base agli input dell'utente. */
+        function calculateSuggestions() {
+            const selectedMap = document.getElementById('mapSelect').value;
+            const alliedIds = Array.from(document.querySelectorAll('input[name="alliedHero"]:checked')).map(el => el.value);
+            const enemyIds = Array.from(document.querySelectorAll('input[name="enemyHero"]:checked')).map(el => el.value);
+            
+            // Verifica input minimi
+            if (!selectedMap) {
+                return displayMessage("Per favore, seleziona una Mappa.");
+            }
+            if (alliedIds.length === 0 && enemyIds.length === 0) {
+                return displayMessage("Per favore, seleziona almeno un eroe Alleato o Avversario.");
+            }
+
+            // Identifica gli eroi già selezionati (sia alleati che nemici)
+            const pickedHeroIds = [...alliedIds, ...enemyIds];
+
+            // Calcola i ruoli mancanti nella squadra alleata
+            const alliedHeroes = HEROES_DATA.filter(h => alliedIds.includes(h.id));
+            const alliedRoles = alliedHeroes.map(h => h.role);
+            const neededRoles = ROLES.filter(role => !alliedRoles.includes(role));
+
+            const suggestions = [];
+
+            // Itera su tutti gli eroi disponibili per trovare il migliore
+            for (const candidateHero of HEROES_DATA) {
+                // Salta gli eroi già scelti
+                if (pickedHeroIds.includes(candidateHero.id)) {
+                    continue;
+                }
+                
+                // Salta gli eroi che non hanno punteggi per la mappa selezionata (dovrebbe essere raro con l'inizializzazione)
+                if (!candidateHero.mapScore[selectedMap]) {
+                    continue;
+                }
+
+
+                let score = 0;
+                let explanation = [];
+                
+                // 1. Punteggio Mappa (Peso 1.5)
+                const mapScore = candidateHero.mapScore[selectedMap] || 0;
+                score += mapScore * SCORE_WEIGHTS.map;
+                explanation.push(`Mappa (${selectedMap}): ${mapScore * SCORE_WEIGHTS.map.toFixed(1)} punti (Valore base: ${mapScore}/5)`);
+
+                // 2. Punteggio Sinergia (Alleati) (Peso 2.0)
+                let synergyScore = 0;
+                alliedIds.forEach(alliedId => {
+                    if (candidateHero.synergy && candidateHero.synergy.includes(alliedId)) {
+                        synergyScore += 1; // +1 per ogni alleato con cui ha sinergia
+                    }
+                });
+                score += synergyScore * SCORE_WEIGHTS.synergy;
+                if (synergyScore > 0) {
+                    explanation.push(`Sinergia Alleata: ${synergyScore * SCORE_WEIGHTS.synergy.toFixed(1)} punti (Sinergia con ${synergyScore} eroe/i)`);
+                }
+
+                // 3. Punteggio Counter (Avversari) (Peso 2.5)
+                let counterScore = 0;
+                enemyIds.forEach(enemyId => {
+                    // Controlla se l'eroe candidato è contrastato dall'eroe nemico
+                    if (candidateHero.counter && candidateHero.counter.includes(enemyId)) {
+                        counterScore += 1; // +1 per ogni nemico che il candidato contrasta
+                    }
+                });
+                score += counterScore * SCORE_WEIGHTS.counter;
+                if (counterScore > 0) {
+                    explanation.push(`Counter Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta ${counterScore} eroe/i)`);
+                }
+                
+                // 4. Bonus Ruolo Mancante (Peso 5.0)
+                let roleBonus = 0;
+                if (neededRoles.includes(candidateHero.role)) {
+                    roleBonus = SCORE_WEIGHTS.roleBonus;
+                    score += roleBonus;
+                    explanation.push(`**BONUS RUOLO**: ${roleBonus.toFixed(1)} punti (Manca il ruolo: ${candidateHero.role})`);
+                }
+
+                suggestions.push({
+                    hero: candidateHero.name,
+                    role: candidateHero.role,
+                    score: score,
+                    explanation: explanation
+                });
+            }
+
+            // Ordina per punteggio decrescente
+            suggestions.sort((a, b) => b.score - a.score);
+
+            // Visualizza i risultati
+            renderSuggestions(suggestions.slice(0, 5), alliedRoles, neededRoles);
+        }
+
+        /** Renderizza la lista di suggerimenti nella UI. */
+        function renderSuggestions(topSuggestions, alliedRoles, neededRoles) {
+            const list = document.getElementById('suggestionsList');
+            
+            // Visualizza la composizione attuale del team
+            const alliedRolesString = alliedRoles.length > 0 ? alliedRoles.join(', ') : 'Nessun ruolo selezionato';
+            const neededRolesString = neededRoles.length > 0 ? neededRoles.join(', ') : 'Tutti i ruoli sono coperti (teoricamente)';
+
+            let html = `
+                <div class="mb-6 p-4 rounded-lg bg-gray-800 border border-gray-700">
+                    <p class="text-sm text-gray-400">Ruoli Alleati Selezionati: <span class="text-green-300 font-medium">${alliedRolesString}</span></p>
+                    <p class="text-sm text-gray-400">Ruoli Mancanti Prioritari: <span class="text-red-300 font-bold">${neededRolesString}</span></p>
+                </div>
+            `;
+
+
+            if (topSuggestions.length === 0) {
+                html += '<p class="text-center text-yellow-300 bg-yellow-900 p-4 rounded-lg">Nessun eroe disponibile. Assicurati di non aver selezionato tutti gli eroi.</p>';
+            } else {
+                topSuggestions.forEach((suggestion, index) => {
+                    const rankColor = index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-amber-700' : 'bg-gray-600';
+                    const roleColor = {
+                        'Tank': 'text-red-500',
+                        'Bruiser': 'text-orange-500',
+                        'Melee Assassin': 'text-yellow-500',
+                        'Ranged Assassin': 'text-purple-500',
+                        'Healer': 'text-green-500',
+                        'Support': 'text-teal-500'
+                    }[suggestion.role] || 'text-gray-400';
+
+                    html += `
+                        <div class="suggested-hero card p-4 rounded-xl flex items-center justify-between transition-shadow relative overflow-hidden">
+                            <div class="flex items-center space-x-4 z-10">
+                                <span class="w-8 h-8 flex items-center justify-center rounded-full font-bold text-gray-900 ${rankColor}">${index + 1}</span>
+                                <div>
+                                    <h3 class="text-xl font-bold ${roleColor}">${suggestion.hero}</h3>
+                                    <p class="text-sm text-gray-400">${suggestion.role}</p>
+                                </div>
+                            </div>
+                            <div class="text-right z-10">
+                                <span class="text-2xl font-extrabold text-red-400">${suggestion.score.toFixed(1)}</span>
+                                <span class="text-sm text-gray-500 block">Punteggio Totale</span>
+                            </div>
+                            <!-- Dettagli espandibili (simulati) -->
+                            <div class="absolute inset-0 bg-black bg-opacity-80 rounded-xl p-4 opacity-0 hover:opacity-100 transition-opacity flex flex-col justify-center">
+                                <h4 class="text-lg font-bold mb-2 text-white border-b border-gray-600 pb-1">Dettaglio Punteggio:</h4>
+                                <ul class="text-sm text-gray-300 space-y-1 list-disc pl-5">
+                                    ${suggestion.explanation.map(exp => `<li>${exp}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            list.innerHTML = html;
+        }
+
+
+        // --- ESECUZIONE ---
+        window.onload = initializeUI;
+    </script>
+</body>
+</html>
