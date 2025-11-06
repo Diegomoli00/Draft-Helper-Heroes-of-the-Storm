@@ -214,6 +214,8 @@
         ];
 
         const ROLES = ['Tank', 'Bruiser', 'Melee Assassin', 'Ranged Assassin', 'Healer', 'Support'];
+        const EXCLUDEDROLES = ['Melee Assassin', 'Support'];
+        const SAMEROLES = ['Melee Assassin', 'Ranged Assassin'];
 
         // Pesi per il calcolo del punteggio
         const SCORE_WEIGHTS = {
@@ -327,7 +329,11 @@
             const alliedHeroes = HEROES_DATA.filter(h => alliedIds.includes(h.id));
             const enemyHeroes = HEROES_DATA.filter(h => enemyIds.includes(h.id));
             const alliedRoles = alliedHeroes.map(h => h.role);
-            const neededRoles = ROLES.filter(role => !alliedRoles.includes(role));
+
+            const neededRoles = ROLES.filter(role => !alliedRoles.includes(role) && !EXCLUDEDROLES.includes(role));
+            const rightRoles = alliedRoles.map(role => SAMEROLES.includes(role) ? 'Generic Assassin' : role);
+            const assassinCount = rightRoles.filter(r => r === 'Generic Assassin').length;
+            if (assassinCount < 2) neededRoles.push('Melee Assassin','Ranged Assassin');
 
             const suggestions = [];
 
