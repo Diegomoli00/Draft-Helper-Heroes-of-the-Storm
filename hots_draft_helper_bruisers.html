@@ -64,6 +64,22 @@
                     <!-- Checkboxes populated by JS -->
                 </div>
             </div>
+
+            <!-- Eroi Bannati -->
+            <div class="card p-5 rounded-lg shadow-lg">
+                <label for="bannedHeroes" class="block text-lg font-semibold mb-3 text-purple-400">4. Eroi Bannati (Seleziona 4)</label>
+                <div id="bannedHeroesContainer" class="space-y-2 max-h-40 overflow-y-auto pr-2 bg-gray-800 p-2 rounded-lg border border-gray-700">
+                    <!-- Checkboxes populated by JS -->
+                </div>
+            </div>
+
+            <!-- Ruolo da pickare checkbox -->
+            <div class="card p-5 rounded-lg shadow-lg">
+                <label for="roleToPick" class="block text-lg font-semibold mb-3 text-purple-400">5. Ruolo da pickare</label>
+                <select id="roleToPick" class="w-full bg-gray-700 text-white border border-gray-600 rounded-lg p-3 focus:ring-red-500 focus:border-red-500 transition duration-150">
+                    <!-- Checkboxes populated by JS -->
+                </select>
+            </div>
             
         </div>
         
@@ -233,6 +249,8 @@
             const mapSelect = document.getElementById('mapSelect');
             const alliedContainer = document.getElementById('alliedHeroesContainer');
             const enemyContainer = document.getElementById('enemyHeroesContainer');
+            const bannedContainer = document.getElementById('bannedHeroesContainer');
+            const roleToPick = document.getElementById('roleToPick');
 
             // 1. Inizializza Mappe
             mapSelect.innerHTML = '<option value="">Seleziona Mappa...</option>';
@@ -243,7 +261,17 @@
                 mapSelect.appendChild(option);
             });
 
-            // 2. Inizializza Eroi (Alleati & Avversari)
+            // 2. Inizializza Mappe
+            roleToPick.innerHTML = '<option value="">Seleziona Ruolo</option>';
+            ROLES.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role;
+                option.textContent = role;
+                roleToPick.appendChild(option);
+            });
+            
+
+            // 3. Inizializza Eroi (Alleati & Avversari)
             // Filtra per eroi con dati completi (ovvero: hanno il mapScore per la prima mappa)
             const availableHeroes = HEROES_DATA.filter(hero => hero.mapScore[MAPS[0]]);
             
@@ -255,6 +283,12 @@
                         <span>${hero.name} <span class="text-gray-400">(${hero.role})</span></span>
                     </label>
                 `;
+
+                // Checkbox Bannati
+                bannedContainer.innerHTML += checkboxHtml
+                    .replace('__HERO_TYPE__', 'bannedHero')
+                    .replace('__COLOR_CLASS__', 'text-green-500');
+                
 
                 // Checkbox Alleati
                 alliedContainer.innerHTML += checkboxHtml
@@ -313,6 +347,8 @@
             const selectedMap = document.getElementById('mapSelect').value;
             const alliedIds = Array.from(document.querySelectorAll('input[name="alliedHero"]:checked')).map(el => el.value);
             const enemyIds = Array.from(document.querySelectorAll('input[name="enemyHero"]:checked')).map(el => el.value);
+            const bannedIds = Array.from(document.querySelectorAll('input[name="bannedHero"]:checked')).map(el => el.value);
+            const roleToPick = document.getElementById('roleToPick').value;
             
             // Verifica input minimi
             if (!selectedMap) {
@@ -323,7 +359,7 @@
             }
 
             // Identifica gli eroi già selezionati (sia alleati che nemici)
-            const pickedHeroIds = [...alliedIds, ...enemyIds];
+            const pickedHeroIds = [...alliedIds, ...enemyIds, ...bannedIds];
 
             // Calcola i ruoli mancanti nella squadra alleata
             const alliedHeroes = HEROES_DATA.filter(h => alliedIds.includes(h.id));
@@ -340,6 +376,10 @@
             // Itera su tutti gli eroi disponibili per trovare il migliore
             for (const candidateHero of HEROES_DATA) {
                 // Salta gli eroi già scelti
+                if (roleToPick && candidateHero.role !== roleToPick){
+                    continue;
+                }
+
                 if (pickedHeroIds.includes(candidateHero.id)) {
                     continue;
                 }
