@@ -33,7 +33,7 @@
 
     <header class="text-center mb-10">
         <h1 class="text-4xl font-bold text-red-500 mb-2">Heroes of the Storm Draft Helper</h1>
-        <p class="text-xl text-gray-400">Inserisci i dettagli del draft per ottenere la migliore raccomandazione per l'eroe.</p>
+        <p class="text-xl text-gray-400">Enter draft details to get the best hero recommendation.</p>
     </header>
 
     <div id="app" class="max-w-4xl mx-auto">
@@ -43,7 +43,7 @@
             
             <!-- Selezione Mappa -->
             <div class="card p-5 rounded-lg shadow-lg">
-                <label for="mapSelect" class="block text-lg font-semibold mb-3 text-red-400">1. Mappa Attuale</label>
+                <label for="mapSelect" class="block text-lg font-semibold mb-3 text-red-400">1. Current Map</label>
                 <select id="mapSelect" class="w-full bg-gray-700 text-white border border-gray-600 rounded-lg p-3 focus:ring-red-500 focus:border-red-500 transition duration-150">
                     <!-- Options populated by JS -->
                 </select>
@@ -51,10 +51,10 @@
             
             <!-- Eroi Alleati -->
             <div class="card p-5 rounded-lg shadow-lg">
-                <label for="alliedHeroes" class="block text-lg font-semibold mb-3 text-green-400">2. Eroi Alleati (Seleziona 4)</label>
+                <label for="alliedHeroes" class="block text-lg font-semibold mb-3 text-green-400">2. Allied Heroes (Select 4)</label>
                 <input type="text" 
                         id="alliedSearch" 
-                        placeholder="Cerca eroe alleato..."
+                        placeholder="Search allied hero..."
                         oninput="filterHeroes('alliedHeroesContainer', this.value)"
                         class="w-full mb-3 bg-gray-700 text-white border border-gray-600 rounded-lg p-2 focus:ring-green-500 focus:border-green-500">
                 <div id="alliedHeroesContainer" class="space-y-2 max-h-40 overflow-y-auto pr-2 bg-gray-800 p-2 rounded-lg border border-gray-700">
@@ -64,10 +64,10 @@
             
             <!-- Eroi Avversari -->
             <div class="card p-5 rounded-lg shadow-lg">
-                <label for="enemyHeroes" class="block text-lg font-semibold mb-3 text-purple-400">3. Eroi Avversari (Seleziona 5)</label>
+                <label for="enemyHeroes" class="block text-lg font-semibold mb-3 text-purple-400">3. Enemy Heroes (Select 5)</label>
                 <input type="text" 
                         id="enemySearch" 
-                        placeholder="Cerca eroe avversario..."
+                        placeholder="Search banned hero..."
                         oninput="filterHeroes('enemyHeroesContainer', this.value)"
                         class="w-full mb-3 bg-gray-700 text-white border border-gray-600 rounded-lg p-2 focus:ring-purple-500 focus:border-purple-500">
                 <div id="enemyHeroesContainer" class="space-y-2 max-h-40 overflow-y-auto pr-2 bg-gray-800 p-2 rounded-lg border border-gray-700">
@@ -77,10 +77,10 @@
 
             <!-- Eroi Bannati -->
             <div class="card p-5 rounded-lg shadow-lg">
-                <label for="bannedHeroes" class="block text-lg font-semibold mb-3 text-purple-400">4. Eroi Bannati (Seleziona 4)</label>
+                <label for="bannedHeroes" class="block text-lg font-semibold mb-3 text-purple-400">4. Banned Heroes (Select 4)</label>
                 <input type="text" 
                         id="enemySearch" 
-                        placeholder="Cerca eroe avversario..."
+                        placeholder="Search banned hero..."
                         oninput="filterHeroes('bannedHeroesContainer', this.value)"
                         class="w-full mb-3 bg-gray-700 text-white border border-gray-600 rounded-lg p-2 focus:ring-purple-500 focus:border-purple-500">
                 <div id="bannedHeroesContainer" class="space-y-2 max-h-40 overflow-y-auto pr-2 bg-gray-800 p-2 rounded-lg border border-gray-700">
@@ -90,7 +90,7 @@
 
             <!-- Ruolo da pickare checkbox -->
             <div class="card p-5 rounded-lg shadow-lg">
-                <label for="roleToPick" class="block text-lg font-semibold mb-3 text-purple-400">5. Ruolo da pickare</label>
+                <label for="roleToPick" class="block text-lg font-semibold mb-3 text-purple-400">5. Role to Pick</label>
                 <select id="roleToPick" class="w-full bg-gray-700 text-white border border-gray-600 rounded-lg p-3 focus:ring-red-500 focus:border-red-500 transition duration-150">
                     <!-- Checkboxes populated by JS -->
                 </select>
@@ -102,15 +102,15 @@
         <div class="text-center mb-10">
             <button onclick="calculateSuggestions()" 
                     class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg shadow-xl transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-opacity-50">
-                Trova l'Eroe Migliore
+                Find the Best Hero
             </button>
         </div>
         
         <!-- Risultati della Raccomandazione -->
         <div class="card p-6 rounded-lg shadow-xl" id="resultsContainer">
-            <h2 class="text-2xl font-semibold mb-4 text-center">Raccomandazioni Eroe</h2>
+            <h2 class="text-2xl font-semibold mb-4 text-center">Hero Recommendations</h2>
             <div id="suggestionsList" class="space-y-4">
-                <p class="text-center text-gray-400">Inserisci la mappa e gli eroi per iniziare.</p>
+                <p class="text-center text-gray-400">Select the map and heroes to begin.</p>
             </div>
         </div>
 
@@ -270,7 +270,7 @@
             const roleToPick = document.getElementById('roleToPick');
 
             // 1. Inizializza Mappe
-            mapSelect.innerHTML = '<option value="">Seleziona Mappa...</option>';
+            mapSelect.innerHTML = '<option value="">Select Map...</option>';
             MAPS.forEach(map => {
                 const option = document.createElement('option');
                 option.value = map;
@@ -279,7 +279,7 @@
             });
 
             // 2. Inizializza Mappe
-            roleToPick.innerHTML = '<option value="">Seleziona Ruolo</option>';
+            roleToPick.innerHTML = '<option value="">Select Role...</option>';
             ROLES.forEach(role => {
                 const option = document.createElement('option');
                 option.value = role;
@@ -369,10 +369,10 @@
             
             // Verifica input minimi
             if (!selectedMap) {
-                return displayMessage("Per favore, seleziona una Mappa.");
+                return displayMessage("Please, select a Map.");
             }
             if (alliedIds.length === 0 && enemyIds.length === 0) {
-                return displayMessage("Per favore, seleziona almeno un eroe Alleato o Avversario.");
+                return displayMessage("Please, select at least one Allied or Enemy hero.");
             }
 
             // Identifica gli eroi già selezionati (sia alleati che nemici)
