@@ -417,9 +417,10 @@
                         synergyScore += 1; // +1 per ogni alleato con cui ha sinergia
                     }
                 });
+                synergyName -= ","
                 score += synergyScore * SCORE_WEIGHTS.synergy;
                 if (synergyScore > 0) {
-                    explanation.push(`Sinergia Alleata: ${synergyScore * SCORE_WEIGHTS.synergy.toFixed(1)} punti (Sinergia con ${synergyName} eroe/i)`);
+                    explanation.push(`Sinergia Alleata: ${synergyScore * SCORE_WEIGHTS.synergy.toFixed(1)} punti (Sinergia con ${synergyName})`);
                 }
 
                 // 3. Punteggio Counter (Avversari) (Peso 2.5)
@@ -432,9 +433,10 @@
                         counterScore += 1; // +1 per ogni nemico che il candidato contrasta
                     }
                 });
+                counterName -= ","
                 score += counterScore * SCORE_WEIGHTS.counter;
                 if (counterScore > 0) {
-                    explanation.push(`Counter Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta ${counterName} eroe/i)`);
+                    explanation.push(`Counter Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta da ${counterName})`);
                 }
 
                 // 4. Punteggio Counterato (Avversari) (Peso 2.5)
@@ -447,9 +449,10 @@
                         counteredScore -= 1; // -1 per ogni nemico che il candidato contrasta
                     }
                 });
+                counteredName = ","
                 score += counteredScore * SCORE_WEIGHTS.countered;
                 if (counteredScore > 0) {
-                    explanation.push(`Caunterato da Avversario: ${counteredScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Caunterato da ${counteredName} eroe/i)`);
+                    explanation.push(`Caunterato da Avversario: ${counteredScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Caunterato da ${counteredName})`);
                 }
                 
                 // 5. Bonus Ruolo Mancante (Peso 5.0)
