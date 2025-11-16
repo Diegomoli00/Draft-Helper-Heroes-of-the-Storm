@@ -413,11 +413,10 @@
                 let synergyName="";
                 alliedIds.forEach(alliedId => {
                     if (candidateHero.synergy && candidateHero.synergy.includes(alliedId)) {
-                        synergyName += alliedId + ","
+                        synergyName += alliedId + " "
                         synergyScore += 1; // +1 per ogni alleato con cui ha sinergia
                     }
                 });
-                synergyName -= ","
                 score += synergyScore * SCORE_WEIGHTS.synergy;
                 if (synergyScore > 0) {
                     explanation.push(`Sinergia Alleata: ${synergyScore * SCORE_WEIGHTS.synergy.toFixed(1)} punti (Sinergia con ${synergyName})`);
@@ -429,11 +428,10 @@
                 enemyHeroes.forEach(enemyHeroes => {
                     // Controlla se l'eroe candidato è contrastato dall'eroe nemico
                     if (enemyHeroes.countered.includes(candidateHero.id)) {
-                        counterName += enemyHeroes.id + ","
+                        counterName += enemyHeroes.id + " "
                         counterScore += 1; // +1 per ogni nemico che il candidato contrasta
                     }
                 });
-                counterName -= ","
                 score += counterScore * SCORE_WEIGHTS.counter;
                 if (counterScore > 0) {
                     explanation.push(`Counter Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta da ${counterName})`);
@@ -445,11 +443,10 @@
                 enemyIds.forEach(enemyId => {
                     // Controlla se l'eroe candidato è contrastato dall'eroe nemico
                     if (candidateHero.countered && candidateHero.countered.includes(enemyId)) {
-                        counteredName += enemyId + ","
+                        counteredName += enemyId + " "
                         counteredScore -= 1; // -1 per ogni nemico che il candidato contrasta
                     }
                 });
-                counteredName = ","
                 score += counteredScore * SCORE_WEIGHTS.countered;
                 if (counteredScore > 0) {
                     explanation.push(`Caunterato da Avversario: ${counteredScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Caunterato da ${counteredName})`);
