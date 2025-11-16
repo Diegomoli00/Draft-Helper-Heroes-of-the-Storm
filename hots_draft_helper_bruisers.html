@@ -410,40 +410,46 @@
 
                 // 2. Punteggio Sinergia (Alleati) (Peso 2.0)
                 let synergyScore = 0;
+                let synergyName="";
                 alliedIds.forEach(alliedId => {
                     if (candidateHero.synergy && candidateHero.synergy.includes(alliedId)) {
+                        synergyName += alliedId + ","
                         synergyScore += 1; // +1 per ogni alleato con cui ha sinergia
                     }
                 });
                 score += synergyScore * SCORE_WEIGHTS.synergy;
                 if (synergyScore > 0) {
-                    explanation.push(`Sinergia Alleata: ${synergyScore * SCORE_WEIGHTS.synergy.toFixed(1)} punti (Sinergia con ${synergyScore} eroe/i)`);
+                    explanation.push(`Sinergia Alleata: ${synergyScore * SCORE_WEIGHTS.synergy.toFixed(1)} punti (Sinergia con ${synergyName} eroe/i)`);
                 }
 
                 // 3. Punteggio Counter (Avversari) (Peso 2.5)
                 let counterScore = 0;
+                let counterName="";
                 enemyHeroes.forEach(enemyHeroes => {
                     // Controlla se l'eroe candidato è contrastato dall'eroe nemico
                     if (enemyHeroes.countered.includes(candidateHero.id)) {
+                        counterName += enemyHeroes.id + ","
                         counterScore += 1; // +1 per ogni nemico che il candidato contrasta
                     }
                 });
                 score += counterScore * SCORE_WEIGHTS.counter;
                 if (counterScore > 0) {
-                    explanation.push(`Counter Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta ${counterScore} eroe/i)`);
+                    explanation.push(`Counter Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta ${counterName} eroe/i)`);
                 }
 
                 // 4. Punteggio Counterato (Avversari) (Peso 2.5)
                 let counteredScore = 0;
+                let counteredName="";
                 enemyIds.forEach(enemyId => {
                     // Controlla se l'eroe candidato è contrastato dall'eroe nemico
                     if (candidateHero.countered && candidateHero.countered.includes(enemyId)) {
+                        counteredName += enemyId + ","
                         counteredScore -= 1; // -1 per ogni nemico che il candidato contrasta
                     }
                 });
                 score += counteredScore * SCORE_WEIGHTS.countered;
                 if (counteredScore > 0) {
-                    explanation.push(`Caunterato da Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta ${counterScore} eroe/i)`);
+                    explanation.push(`Caunterato da Avversario: ${counteredScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Caunterato da ${counteredName} eroe/i)`);
                 }
                 
                 // 5. Bonus Ruolo Mancante (Peso 5.0)
