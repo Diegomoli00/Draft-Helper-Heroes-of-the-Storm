@@ -367,9 +367,6 @@
             if (!selectedMap) {
                 return displayMessage("Please, select a Map.");
             }
-            if (alliedIds.length === 0 && enemyIds.length === 0) {
-                return displayMessage("Please, select at least one Allied or Enemy hero.");
-            }
 
             // Identifica gli eroi già selezionati (sia alleati che nemici)
             const pickedHeroIds = [...alliedIds, ...enemyIds, ...bannedIds];
@@ -469,7 +466,7 @@
             suggestions.sort((a, b) => b.score - a.score);
 
             // Visualizza i risultati
-            renderSuggestions(suggestions.slice(0, 5), alliedRoles, neededRoles);
+            renderSuggestions(suggestions.slice(0, 10), alliedRoles, neededRoles);
         }
 
         /** Renderizza la lista di suggerimenti nella UI. */
