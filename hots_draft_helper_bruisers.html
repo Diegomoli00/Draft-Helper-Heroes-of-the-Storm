@@ -434,23 +434,29 @@
                 });
                 score += counterScore * SCORE_WEIGHTS.counter;
                 if (counterScore > 0) {
-                    explanation.push(`Counter Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta da ${counterName})`);
+                    explanation.push(`Counter Avversario: ${counterScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Contrasta ${counterName})`);
                 }
 
-                // 4. Punteggio Counterato (Avversari) (Peso 2.5)
+                // 4. Countered Score (Opponents)
                 let counteredScore = 0;
-                let counteredName="";
+                let counteredList = [];
+
                 enemyIds.forEach(enemyId => {
-                    // Controlla se l'eroe candidato è contrastato dall'eroe nemico
                     if (candidateHero.countered && candidateHero.countered.includes(enemyId)) {
-                        counteredName += enemyId + " "
-                        counteredScore -= 1; // -1 per ogni nemico che il candidato contrasta
+                        counteredScore -= 1;
+                        const enemyHero = HEROES_DATA.find(h => h.id === enemyId);
+                        counteredList.push(enemyHero ? enemyHero.name : enemyId);
                     }
                 });
+
                 score += counteredScore * SCORE_WEIGHTS.countered;
-                if (counteredScore > 0) {
-                    explanation.push(`Caunterato da Avversario: ${counteredScore * SCORE_WEIGHTS.counter.toFixed(1)} punti (Caunterato da ${counteredName})`);
+
+                if (counteredScore < 0) {
+                    explanation.push(
+                        `Countered by: ${(counteredScore * SCORE_WEIGHTS.countered).toFixed(1)} points (by: ${counteredList.join(', ')})`
+                    );
                 }
+
                 
                 // 5. Bonus Ruolo Mancante (Peso 5.0)
                 let roleBonus = 0;
