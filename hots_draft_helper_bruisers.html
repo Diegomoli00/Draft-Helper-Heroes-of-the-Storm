@@ -244,7 +244,7 @@
 
         const ROLES = ['Tank', 'Bruiser', 'Melee Assassin', 'Ranged Assassin', 'Healer', 'Support'];
         const EXCLUDEDROLES = ['Melee Assassin', 'Support'];
-        const SAMEROLES = ['Melee Assassin', 'Ranged Assassin'];
+        const SAMEROLES = ['Melee Assassin', 'Ranged Assassin', 'Support'];
 
         // Pesi per il calcolo del punteggio
         const SCORE_WEIGHTS = {
@@ -377,9 +377,12 @@
             const alliedRoles = alliedHeroes.map(h => h.role);
 
             const neededRoles = ROLES.filter(role => !alliedRoles.includes(role) && !EXCLUDEDROLES.includes(role));
-            const rightRoles = alliedRoles.map(role => SAMEROLES.includes(role) ? 'Generic Assassin' : role);
-            const assassinCount = rightRoles.filter(r => r === 'Generic Assassin').length;
-            if (assassinCount < 2) neededRoles.push('Melee Assassin','Ranged Assassin');
+            // DPZ = DPS + Support, ruoli che competono per i 2 slot flessibili
+            const flexibleRoles = alliedRoles.filter(role => SAMEROLES.includes(role));
+            if (flexibleRoles.length < 2) {
+                neededRoles.push('Melee Assassin', 'Ranged Assassin', 'Support');
+            }
+
 
             const suggestions = [];
 
